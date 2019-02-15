@@ -9,8 +9,8 @@
 if (!defined('START_TIME')) {
 	define ('START_TIME',3);
 	define ('ARRIVAL_TYPE',4);
-	define ('END_TIME',3);
-	define ('DEPARTURE_TYPE',3);
+	define ('END_TIME',5);
+	define ('DEPARTURE_TYPE',6);
 	define ('NAME',1);
 }
 
@@ -111,10 +111,10 @@ if (!function_exists('getSliceText')) {
 		else $otherYear = false;
 
 		$ret .= getDateStringFromValue($slice->getValue(START_TIME), $otherYear);
-		if ($slice->getValue(4) != '2') $ret .= replaceSprog('nachmittags');
+		if ($slice->getValue(END_TIME) != '2') $ret .= replaceSprog('nachmittags');
 		$ret .= ' bis ';
 		$ret .= getDateStringFromValue($slice->getValue(5), $otherYear);
-		if ($slice->getValue(6) != '2') $ret .= replaceSprog('vormittags');
+		if ($slice->getValue(DEPARTURE_TYPE) != '2') $ret .= replaceSprog('vormittags');
 
 		if (rex::isBackend()) $ret = getSliceLinkStart($slice) . $ret . ' ('.$slice->getValue(1).')</a>';
 
@@ -254,7 +254,7 @@ while ($slice) {
 		$sliceCount++;
 
 		$startDate = trim($slice->getValue(START_TIME));
-		$endDate = trim($slice->getValue(5));
+		$endDate = trim($slice->getValue(END_TIME));
 		$start = strtotime($startDate);
 		$end = strtotime($endDate);
 
@@ -326,7 +326,7 @@ while ($slice) {
 						}
 						// start day
 						if ($row == $startMonth && $col == $startDay) {
-							if ($slice->getValue(4)=='2') $wholeDay = 2; else $wholeDay = 0;
+							if ($slice->getValue(ARRIVAL_TYPE)=='2') $wholeDay = 2; else $wholeDay = 0;
 							addValueAndCheckOverlap($bookingplan, $overlappingList, $row,$col,$slice,1 + $wholeDay);
 
 							// $bookingplan[$row][$col]['value'] += 1 + $wholeDay;
@@ -334,7 +334,7 @@ while ($slice) {
 						}
 						// end day
 						if ($row == $endMonth && $col == $endDay) {
-							if ($slice->getValue(6)=='2') $wholeDay = 1; else $wholeDay = 0;
+							if ($slice->getValue(DEPARTURE_TYPE)=='2') $wholeDay = 1; else $wholeDay = 0;
 							addValueAndCheckOverlap($bookingplan, $overlappingList, $row,$col,$slice, 2 + $wholeDay);
 							// $bookingplan[$row][$col]['value'] += 2 + $wholeDay;
 							// $bookingplan[$row][$col]['id'] = $slice->getId();

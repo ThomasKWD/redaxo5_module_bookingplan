@@ -1,0 +1,23 @@
+fields:
+  - name: 'arrivaltype'
+    type: 'select'
+    label_de: 'Anreise'
+    label_en: 'Arrival'
+    options:
+      1 : 'nachmittags (Standard)'
+      2 : 'ganzen Tag belegen'
+  - name: 'departuretype'
+    type: 'select'
+    label_de: 'Abreise'
+    label_en: 'Departure'
+    options:
+      1 : 'vormittags (Standard)'
+      2 : 'ganzen Tag belegen'
+  - name: 'image'
+    type: 'media'
+    label_de: 'Bildelement'
+    label_en: 'Image element'
+  - name: 'file'
+    type: 'media'
+    label_de: 'Datei Anhang'
+    label_en: 'File attachment'
