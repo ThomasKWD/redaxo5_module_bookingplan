@@ -1,0 +1,111 @@
+$basicYellow : #c3a483;
+$colSpacing : 32px;
+$defaultSpacingHorizontal: $colSpacing / 2;
+
+$bookingEmptyColor : lighten($basicYellow, 25%);
+$bookingBookedColor : rgb(165, 71, 28);
+$bookingArrivalColor: #eba889;
+$bookingDepartureColor: #e17e51;
+$bookingOverlapColor: red;
+
+table.bookingplan {
+
+	width: 100%;
+	border-collapse: separate;
+	border-spacing:1px;
+
+	caption,th,td {
+		color: black;
+	}
+	th,td {
+		text-align: center;
+		width: 3%;
+		min-width: 18px;
+	}
+	th {
+		font-weight: normal;
+		min-width: 18px;
+	}
+	th.col-header {
+		text-align: left;
+		width:7%;
+	}
+	td.row-header {
+		font-weight: normal;
+		text-align: left;
+		width:7%;
+	}
+	.free {
+		background-color: $bookingEmptyColor;
+	}
+	.booked {
+		background-color: $bookingBookedColor;
+	}
+	.arrival,
+	.departure {
+		position:relative;
+		overflow:hidden;
+		background-color: $bookingEmptyColor;
+	}
+	.arrival {
+		background-image: url(belegplan-anreise.png);
+		background-size: 100% 100%;
+	}
+	.departure {
+		background-image: url(belegplan-abreise.png);
+		background-size: 100% 100%;
+	}
+
+	td.overlap {
+		background-color: $bookingOverlapColor;
+	}
+	td a {
+		display: block;
+		position: relative;
+		color: white;
+		text-decoration: none;
+		font-weight: bold;
+	}
+}
+table.bookingplan--legend {
+	width:auto;
+
+	td {
+		width: auto;
+		vertical-align: top;
+	}
+
+	// .arrival,.booked,.departure must be adjusted
+	// because they are converted to displa block here!!
+	// - this is needed to *not* strech td vertically due to long description text
+	.arrival,
+	.booked,
+	.departure {
+		display: block;
+		height:30px;
+		width:20px;
+	}
+
+	.description {
+		text-align: left;
+		padding-left: $defaultSpacingHorizontal;
+	}
+}
+
+// is an ul
+.booking-list {
+	list-style-type: none;
+	padding: 0 $colSpacing;
+
+	li {
+		border-bottom:solid 1px $bookingEmptyColor;
+	}
+	li:first-child {
+		border-top:solid 1px $bookingEmptyColor;
+	}
+
+	.booking-date {
+		font-weight: bold;
+		color: $bookingBookedColor;
+	}
+}
