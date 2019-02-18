@@ -55,6 +55,26 @@ table.bookingplan {
 		background-image: url(belegplan-abreise.png);
 		background-size: 100% 100%;
 	}
+	.arrival__marker {
+		display: none;
+		position: absolute;
+		width:100%;
+		height:100%;
+		top:0;
+		left:0;
+		border-top:31px solid $bookingEmptyColor;
+		border-right:24px solid $bookingBookedColor;
+	}
+	.departure__marker {
+		display: none;
+		position: absolute;
+		width:100%x;
+		height:100%;
+		top:0;
+		left:0;
+		border-top:31px solid $bookingBookedColor;
+		border-right:24px solid $bookingEmptyColor;
+	}
 
 	td.overlap {
 		background-color: $bookingOverlapColor;
@@ -107,5 +127,11 @@ table.bookingplan--legend {
 	.booking-date {
 		font-weight: bold;
 		color: $bookingBookedColor;
+	}
+
+	// meant to use in backend only
+	.be_warning {
+		color: #b99e33;
+		font-weight: bold;
 	}
 }
