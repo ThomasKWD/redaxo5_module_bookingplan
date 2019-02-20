@@ -1,16 +1,4 @@
 <?php
-// setlocale(LC_TIME,'de_DE.utf8', 'de_DE@euro', 'de_DE', 'de','ge','german','German');
-
-// - best way making the month names i want:
-// for($i=1; $i<=12; $i++) {
-// 	// ! strftime different string placeholders
-// 	// - needs mb_substr due to März
-// 	echo "<br />".mb_substr(strftime('%B',strtotime("2019-$i-01")),0,3);
-// }
-
-// cleanup
-// - $monthsNames
-// - test code
 
 // style
 // - make leading &nbsp; for numbers in th (instead leading zero)
@@ -29,8 +17,6 @@ class kwd_bookingplan_sked {
 	protected $invalidList = array();
 
 	function __construct($year, $id, $generateNow = true) {
-
-		setlocale (LC_ALL, 'de_DE.utf8');
 
 		// if u need a plan for 1999 write me a letter :-)
 		if(intval($year) > 2000 ) $this->displayYear = $year;
@@ -68,6 +54,10 @@ class kwd_bookingplan_sked {
 			//
 			// if (!$list) $list = '<p>Keine Belegungs-Einträge in diesem Zeitraum.</p>'; else $list = "<ul>$list</ul>";
 
+			// echo '<pre>';
+			// print_r($this->skedEntries);
+			// echo '</pre>';
+
 			if (count($this->skedEntries)) return true;
 		}
 		// for the case init is called by user later
@@ -86,6 +76,19 @@ class kwd_bookingplan_sked {
 		return $this->skedEntries; // lot of copying
 	}
 
+	/** read updatedate of each entry and find latest
+	*	- finds entries of category set in instance
+	*
+	*	??? only select entries in the current year
+	*   ??? having updatedate in the initial api response would save this extra query
+	*/
+	function getLastestUpdateDate() {
+		$sql = rex_sql::factory();
+		$query = 'SELECT `name_1`, `id`, `updatedate` FROM `' . rex::getTablePrefix() . 'sked_entries` WHERE `category`=1 ORDER BY `updatedate` DESC LIMIT 1';
+		$sql->setQuery($query);
+		return strftime('%d. %B %Y',$sql->getDateTimeValue('updatedate'));
+	}
+
 	function replaceSprog($text) {
 		if ($this->sprog) return sprogcard($text);
 		return $text;
@@ -97,6 +100,7 @@ class kwd_bookingplan_sked {
 	}
 
 	protected function getEntryLinkStart($id) {
+		if (!$id) return '<a href="index.php?page=sked/entries&func=add" target="myskedpage">';
 		return '<a href="index.php?page=sked/entries&func=edit&id='.$id.'" target="myskedpage">';
 	}
 
@@ -112,7 +116,7 @@ class kwd_bookingplan_sked {
 		// $ret .= (count($date) >= 3 ? $date[2] : '?') .'. ';
 		// $ret .= (count($date) >= 2 ? $date[1] : '?') .'. ';
 		// if ($showYear) $ret .= (count($date) >= 1 ? $date[0] : '?') .'. ';
-		$ret .= strftime('%a %d. ',$timeStamp) . kwd_getMonthName(date('n',$timeStamp));
+		$ret .= strftime('%a %d. ',$timeStamp) . $this->getMonthName(date('n',$timeStamp));
 		if ($showYear) $ret .= strftime(' %Y',$timeStamp); // with space!
 		$ret .= '</span>';
 
@@ -124,8 +128,7 @@ class kwd_bookingplan_sked {
 	//
 	protected function getSkedEntry($id) {
 		foreach($this->skedEntries as $e) {
-			if ($e['id'] == $id) return $e['entry'];
-			break;
+			if (intval($e['id']) == $id) return $e['entry'];
 		}
 
 		return null;
@@ -183,71 +186,97 @@ class kwd_bookingplan_sked {
 	}
 
 
-	// ??? make inline; just 1 call existent
-	// $state string that specifies empty|half-am|half-pm|error
-	// $type string that specifies additional states like "angefragt" in contrast to empty or "booked"
-	// $id leads to link + title  for backend
-	// - conflict cells ($state == overlap) are marked as "booked" in frontend
-	// $title is used differently, usually not as HTML title attr
-	function generateTableCell($state, $type, $id) {
+	/** produce a cell in output table
+	* @param state string that specifies empty|half-am|half-pm|error
+	* PLANNED: $type string that specifies additional states like "angefragt" in contrast to empty or "booked"
+	* @param id value or unset or null or 0 == backend, -1 == frontend
+	* - conflict cells ($state == overlap) are marked as "booked" in frontend
+	* $title is used differently, usually not as HTML title attr
+	*/
+	function generateTableCell($row,$col, $writeDay = false) {
 
 		$cellTypeMarker = '';
-		switch ($state) {
-			case '!' :
-				if ($id) {
-					$cssClass = 'overlap';
-					break; // yes, break inside block
-				}
-			case 'X' :
-				$cssClass = 'booked';
-				$title = $this->replaceSprog('belegt');
-				break;
-			case '/':
+		$id = 0;
+		$linkStart = '';
+		$cellText = '&nbsp;';
+
+
+		$e = $this->bookingPlan[$row][$col]['value'];
+
+		if (rex::isBackend()) {
+			// $out .= getSliceLinkStart(rex_article_slice::getArticleSliceById($bookingplan[$row][$col]['id']))
+			// 	.$char.'</a>';
+			$id = intval($this->bookingPlan[$row][$col]['id']);
+		}
+		else $id = -1; // ! to distinguish between frontend and unset $id
+
+		if ($e) {
+			$char = '';
+			if ($e == 1) {
 				$cssClass = 'arrival';
 				$title = $this->replaceSprog('anreisetag');
 				$cellTypeMarker = '<span class="arrival__marker"></span>';
-				break;
-			case '\\':
+			}
+			else if ($e == 2) {
 				$cssClass = 'departure';
 				$title = $this->replaceSprog('abreisetag');
 				$cellTypeMarker = '<span class="departure__marker"></span>';
-				break;
-			case '=':
-				$cssClass = 'invalid';
-				$title = '';
-				break;
-			default :
-				$cssClass = 'free';
-				$title = $this->replaceSprog('frei');
-				break;
-		}
-		$linkStart = '';
-
-		//  TODO: check isBackend again if $id can occur in Frontend!
-		if ($id) {
-			// ??? read from $skedEntries instead calling sked again
-			$linkStart = $this->getEntryLinkStart($id);
-			$entry = $this->getSkedEntry($id);
-			if ($entry) {
-				$title = $entry->entry_name;
 			}
-			else $title = 'sked Entry';
-		}
-		if ($cssClass=='overlap') {
-			$cellText = '!';
-		}
-		else if ($id){
-			$cellText = '&nbsp;';
+			else if ($e == 3) {
+				$cssClass = 'booked';
+				$title = $this->replaceSprog('belegt');
+			}
+			// $bookingplan[$row][$col]['id'];
+			else if ($e > 3) {
+				if ($id > 0) {
+					$cssClass = 'overlap';
+				}
+				else $cssClass = 'booked';
+				$title = $this->replaceSprog('belegt');
+			}
+
 		}
 		else {
-			// ! HTML
-			$cellText  = '<span class="sr-only">'.$title.'</span>';
+			$cssClass = 'free';
+			$title = $this->replaceSprog('frei');
 		}
+
+
+
+		$cellText = ($writeDay) ? $col : '';
+
+		if ($id > -1) {
+			$linkStart = $this->getEntryLinkStart($id);
+			if ($id > 0) {
+				$entry = $this->getSkedEntry($id);
+				if ($entry) {
+					$title = $entry->entry_name;
+				}
+				else $title = 'sked Entry';
+			}
+		}
+		if ($cssClass=='overlap') {
+			$cellText .= '!';
+		}
+		else if (!$writeDay){
+			$cellText .= '&nbsp;';
+		}
+		else {
+			// ??? consider whole date for screen readers in each cell
+			$cellText  .= '<span class="sr-only"> ('.$title.')</span>';
+		}
+
+
 		// ! $title is used for sr-only/aria-hidden, real title only in backend
-		return '			<td class="'.$cssClass.'"'.
-		($id ? ' title="'.$title.'"' : '').
+		return '<td class="'.$cssClass.'"'.
+		($id > 0 ? ' title="'.$title.'"' : '').
 		'>'.$cellTypeMarker.$linkStart.$cellText.($linkStart ? '</a>' : '').'</td>
 		';
+	}
+
+	protected function generateEmptyTableCell() {
+		// ! $title is used for sr-only/aria-hidden, real title only in backend
+		return '<td class="invalid">&nbsp;</td>';
 	}
 
 	protected function generateBookingPlan() {
@@ -384,6 +413,19 @@ class kwd_bookingplan_sked {
 		$this->bookingPlan = $bookingplan; // :-( heavy copying again
 	}
 
+	function getMonthName($monthOrTimeStamp,$shorten = true) {
+
+		$m = intval($monthOrTimeStamp);
+		if ($m <= 12) {
+			$m = strtotime("$m/01");
+		}
+		$month = strftime("%B",$m);
+		if ($shorten) {
+			// don't use "%b" (can produce "Mrz"), because screen readers will read the whole word
+			return mb_substr($month,0,3).'<span class="sr-only">'.mb_substr($month,3).'</span>';
+		}
+		return $month;
+	}
 
 	function getTable() {
 
@@ -391,7 +433,7 @@ class kwd_bookingplan_sked {
 
 		$out = '	<table class="bookingplan">';
 		$out .= '		<tr>';
-		$out .= '			<th class="col-header" title="Monat">Monat</th>'; // proper accessible first col header!
+		$out .= '			<th class="col-header"><span class="sr-only">Monat</span></th>'; // proper accessible first col header!
 		for ($col = 1; $col <= 31; $col++) {
 			$out .= '			<th>'.$col.'</th>';
 		}
@@ -406,55 +448,123 @@ class kwd_bookingplan_sked {
 			// ! title attr is always discouraged
 			$out .= '			<td class="row-header">'
 				// .mb_substr(strftime('%B',strtotime("2019-$row-01")),0,3)
-				.kwd_getMonthName($row)
+				.$this->getMonthName($row)
 				.'</td>';
+
+			$daysInMonth = intval(date('t',strtotime($this->displayYear.'-'.($row).'-01')));
+
 			for ($col = 1; $col <= 31; $col++) {
 
+				// ??? all inside this for is needed twice
+				// ??? put all inside generateTableCell
+				// ??? plus you can cleanup checks because you don't need to write '$char' and yhen parse it again
+
 				// handle shorter months and leapyear
-				if (
-					($col == 31 && ($row == 2 || $row == 4 || $row == 6 || $row ==9 || $row == 11)) ||
-					($col == 30 && ($row == 2)) ||
-					($col == 29 && ($this->displayYear % 4) != 0  && $row == 2)
-				) {
-					$char = '=';
-				}
-				else {
-					$e = $this->bookingPlan[$row][$col]['value'];
-
-					if (rex::isBackend()) {
-						// $out .= getSliceLinkStart(rex_article_slice::getArticleSliceById($bookingplan[$row][$col]['id']))
-						// 	.$char.'</a>';
-						$id = $this->bookingPlan[$row][$col]['id'];
-					}
-					else $id = 0;
-
-					if ($e) {
-						$char = '';
-						if ($e == 1) $char = '/';
-						else if ($e == 2) $char = '\\';
-						else if ($e == 3) $char = 'X';
-							// $bookingplan[$row][$col]['id'];
-						else if ($e > 3) {
-							$char = '!';
-							// TODO: already when writing into matrix, so we can save old and new overlapping entries
-							// writing the id as index prevents duplicate entries
-							// $slice = rex_article_slice::getArticleSliceById($bookingplan[$row][$col]['id']);
-							// if ($slice) {
-							// 	$o = $slice->getValue(1) . ': <b>'.$slice->getValue(3).' - '.$slice->getValue(5). '</b>';
-							// }
-							// else $o = "slice $bookingplan[$row][$col]['id'] error";
-							// if (!isset($overlappingList[$bookingplan[$row][$col]['id']])) $overlappingList[$bookingplan[$row][$col]['id']] = $o;
-						}
-					}
-					else $char = '&middot;';
-				}
-				$out .= $this->generateTableCell($char,'',$id); // change usage to rex::isBackend as param if slice interna needed in Frontend
+				// ??? you could use `date('t',strtotime($displayYear.'-'.($row).'-1'))`
+				// if (
+				// 	($col == 31 && ($row == 2 || $row == 4 || $row == 6 || $row ==9 || $row == 11)) ||
+				// 	($col == 30 && ($row == 2)) ||
+				// 	($col == 29 && ($this->displayYear % 4) != 0  && $row == 2)
+				// ) {
+				// 	$char = '=';
+				// }
+				// else {
+				// 	$e = $this->bookingPlan[$row][$col]['value'];
+				//
+				// 	if (rex::isBackend()) {
+				// 		// $out .= getSliceLinkStart(rex_article_slice::getArticleSliceById($bookingplan[$row][$col]['id']))
+				// 		// 	.$char.'</a>';
+				// 		$id = $this->bookingPlan[$row][$col]['id'];
+				// 	}
+				// 	else $id = -1; // ! to distinguish between frontend and unset $id
+				//
+				// 	if ($e) {
+				// 		$char = '';
+				// 		if ($e == 1) $char = '/';
+				// 		else if ($e == 2) $char = '\\';
+				// 		else if ($e == 3) $char = 'X';
+				// 			// $bookingplan[$row][$col]['id'];
+				// 		else if ($e > 3) {
+				// 			$char = '!';
+				// 			// TODO: already when writing into matrix, so we can save old and new overlapping entries
+				// 			// writing the id as index prevents duplicate entries
+				// 			// $slice = rex_article_slice::getArticleSliceById($bookingplan[$row][$col]['id']);
+				// 			// if ($slice) {
+				// 			// 	$o = $slice->getValue(1) . ': <b>'.$slice->getValue(3).' - '.$slice->getValue(5). '</b>';
+				// 			// }
+				// 			// else $o = "slice $bookingplan[$row][$col]['id'] error";
+				// 			// if (!isset($overlappingList[$bookingplan[$row][$col]['id']])) $overlappingList[$bookingplan[$row][$col]['id']] = $o;
+				// 		}
+				// 	}
+				// 	else $char = '&middot;';
+				// }
+				if ($col <= $daysInMonth) $out .= $this->generateTableCell($row,$col); // change usage to rex::isBackend as param if slice interna needed in Frontend
+				else $out .= $this->generateEmptyTableCell();
 			}
 			$out .= "		</tr>\n";
 		}
 
 		$out .= '	</table>';
 
+		return $out;
+	}
+
+	/** return a HTML table for the month passed
+	*	- init ($this->generateBookingPlan();) mus be done
+	*	@param int $month starts at 1, can be a string which resolves to a valid integer
+	*/
+	function getMonthTable($month,$year = false) {
+		$out = '';
+
+		if (count($this->bookingPlan)) {
+			// in case we get weird strings
+			if (intval($month)) {
+				// TODO: class in SASS
+				$out .= '<table class="bookingplan--month">';
+				$out .= '<caption>'.$this->getMonthName($month,false).($year ? ' '.$this->displayYear : '').'</caption>';
+				$out .= '<tr>';
+
+				for($i = 0; $i < 7; $i++) {
+					$out .=
+					'<th>'
+					.strftime('%a',strtotime('01/'.$i)). ' '
+					.'</th>';
+				}
+
+				$out .= '</tr>';
+
+				// needed at least 2 times
+				$monthStartTime = strtotime($this->displayYear.'-'.$month.'-01');
+				// will count with position in table hence starting with index of 1st of month in 1st week
+				$startWeekDay = date('N',$monthStartTime) - 1;
+				$daysInMonth = date('t',$monthStartTime);
+				// $row, $col in $this->bookingPlan
+				$row = intval($month); // is exact because $row counts from 1 in bookingPlan
+				$col = 1;
+
+				// -assume always 6 rows, but break when month finshed (easier than calculate and have if statements in advance)
+				for ($week = 0; $week < 6; $week++) {
+					$out .= '<tr>';
+
+					// bloedsinnn, need the td anyways
+					for($weekDay = 0; $weekDay < 7; $weekDay++) {
+						if (($week > 0 || $weekDay >= $startWeekDay) && $col <= $daysInMonth ) {
+							$out .= $this->generateTableCell($row,$col, true); // true: display number
+
+							$col ++;
+						}
+						else {
+							$out .= $this->generateEmptyTableCell();
+						}
+					}
+
+					$out .= '</tr>';
+				}
+
+				$out .= '	</table>';
+			}
+
+		}
 		return $out;
 	}
 

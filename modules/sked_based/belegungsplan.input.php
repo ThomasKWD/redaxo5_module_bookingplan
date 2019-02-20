@@ -1,18 +1,17 @@
 <?php
-/*
-INPUT
-Belegungsplan mit sked
+  /*
+    INPUT
+    Modul BELEGPLAN
 
-required addons:
-- mform
-- sked Kalender
-recommended:
-- sprog
+	required addons:
+	- mform
+	- sked Kalender
 
-VALUES:
- 1  Anzeigejahr
- 2  Kategorie im sked (speichert ID!)
-*/
+    VALUES:
+     1  Anzeigejahr
+	 2  Kategorie im sked (speichert ID!)
+	 3  Anzeigemodus: year|month  (1 große oder 1..12 separate Tabellen)
+   */
 
 // init mform
 if (!rex_addon::get('mform')->isAvailable()) {
@@ -22,6 +21,8 @@ else {
 
 	$mform = new MForm();
 
+	$mform->addSelectField(3, array( 'year' => 'Jahrestabelle', 'month' => 'Eine Tabelle pro Monat'), array('label'=>'Anzeige:'))->setDefaultValue('year');
+
 	$years = array();
 	$threeYears = intval(date("Y")) - 1;
 
@@ -30,7 +31,7 @@ else {
 	}
 
 	// $years has keys equal to values
-	$mform->addSelectField(1, $years, array('label'=>'Zeige Jahr:'))->setDefaultValue(intval(date("Y")));
+	$mform->addSelectField(1, $years, array('label'=>'Jahr:'))->setDefaultValue(intval(date("Y")));
 	// how to define selected
 	// if (rex_addon::get('sked')->isAvailable()) {
 	// 	$skedCats = array( 'Scheune','Hauptgebäude', 'Wohnwagen blau');
@@ -52,6 +53,7 @@ if (!rex_addon::get('sked')->isAvailable()) {
 	echo rex_view::error('benötigt das Addon "Sked Kalender"! Bitte installieren und aktivieren!');
 }
 else {
+	// ??? as mform element
 	$select = new rex_select();
 	$select->setId('sked_category');
 	$select->setAttribute('class', 'form-control');
@@ -60,6 +62,7 @@ else {
 	$select->addOption('Alle (nicht empfohlen)','');
 	$select->setSelected('REX_VALUE[2]');
 	// $catselect = $select->get();
+	echo '<label for="sked_category">Kategorie aus sked für diese Belegung:</label>';
 	$select->show();
 }
 

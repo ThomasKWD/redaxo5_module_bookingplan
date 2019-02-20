@@ -1,7 +1,4 @@
 <?php
-// OUTPUT
-// Belegungsplan mit Sked
-
 setlocale (LC_ALL, 'de_DE.utf8');
 
 // cleanup
@@ -11,14 +8,13 @@ setlocale (LC_ALL, 'de_DE.utf8');
 // style
 // - make leading &nbsp; for numbers in th (instead leading zero)
 
-// injects my project styles (similarly to those used in TinyMCE)
 if (rex::isBackend()) {
-	// ??? could check if already imported, when several block of this module present
-    print "<style>\n@import url(\"".rex_url::base('layout/css/maincontent_module.css')."\");\n</style>";
+	print "<style>\n@import url(\"".rex_url::base('layout/css/bookingplan.css')."\");\n</style>";
 }
 
 $bp = new kwd_bookingplan_sked('REX_VALUE[1]','REX_VALUE[2]'); // year, category id
 
+$bp->getLastestUpdateDate();
 
 // ! direct echo into HTML below this point
 
@@ -43,11 +39,22 @@ else {
 echo '<section class="abschnitt">';
 echo "<h2>".$bp->getYear()."</h2>"; // not just REX_VALUE[1], because invalid checks apply
 
-
 if (rex::isBackend() || !rex_request('bookingplan')) {
-	echo '<div class="table-responsive">';
-	echo $bp->getTable();
-	echo '</div>'; // .table-responsive
+
+	if ('REX_VALUE[3]'=='month') {
+		echo '<div class="row">';
+		for ($i=1; $i <= 12; $i++) {
+			echo '<div class="col-xs-12 col-sm-6 col-md-4">';
+			echo $bp->getMonthTable($i,true); // true: display year in each month's caption
+			echo '</div>';
+		}
+		echo '</div>';
+	}
+	else {
+		echo '<div class="table-responsive">';
+		echo $bp->getTable();
+		echo '</div>'; // .table-responsive
+	}
 
 	// INFO FOR HORI SCROLL
 	if (!rex::isBackend()) echo '<p class="table-scroll-info" aria-hidden="true">(<span class="display-info">###kleinedisplays###: </span>###tabelleverschieben###)</p>';
@@ -109,15 +116,10 @@ if (rex::isBackend()) {
 }
 
 // DATE OF LAST CHANGE
-// - for this you must have alle updatedate of affected entries (slices)
-// - we don't want slices of other years, just displayed ones
-// - thus it is easier to store date in slice loop above!! see at '$latestUpdateDate'
-
-// cannot work with sked
-// echo '<p>
-// 	'.replaceSprog('belegplan_geaendert').' '.date("d. m. Y",$latestUpdateDate)
-// .'
-// </p>';
+echo '<p>
+	'.$bp->replaceSprog('belegplan_geaendert').' '.$bp->getLastestUpdateDate()
+.'
+</p>';
 
 if (!rex_request('bookingplan')) {
 	// LEGEND
@@ -164,24 +166,25 @@ if (rex::isBackend()) {
 	<h3>Hinweise:</h3>
 
 	<ul>
-		<li>
-			Alle Einträge im Belegplan existieren als Blocks auf dieser Seite (so ähnlich wie bei Shuri-Ryu-Wochenplan). Du musst einen neuen Block vom Typ "Belegungs-Eintrag" auf der Seite hinzufügen, um einen neuen Eintrag zu erstellen. Die Reihenfolge der Einträge auf der Seite ist egal.
+		<li>Die Daten des Plans werden im "Sked Kalender" verwaltet. Du kannst Einträge bearbeiten, indem du hier <strong>in den Plan klickst</strong>. "Sked" öffnet sich in einem anderen Browser-Tab. Ich empfehle beide Tabs geöffnet zu lassen und zur Übericht immer hierher in die Artikel-Ansicht zurück zu gehen.
 		</li>
-		<li>
-			Du kannst in den Plan klicken, um einen vorhandenen Eintrag zu bearbeiten.
+		<li>	Füge einen neuen Eintrag hinzu, indem du auf einen freien Tag klickst. Dann gelangst du in die "Sked"-Eingabe. Dort musst du das Datum aber nochmal neu festsetzen.
 		</li>
+		<li>Du kannst jedem Eintrag eine Bezeichnung geben, die nur hier und niemals im Frontend zu sehen ist.</li>
 		<li>
 			Überlappungen sind hier rot und mit "!" markiert, im Frontend jedoch normal als "gebucht".
 		</li>
+		<li>Fehlerhafte Einträge erscheinen separat, z. B. bei einer negativen Zeitspanne. Klicke darauf, um sie zu bearbeiten.</li>
 		<li>
 			Es werden nur Einträge überprüft, die dem eingestellten Anzeigejahr entsprechen.
 		</li>
 		<li>
-			Du kannst viele unabhängige Pläne anlegen. Wenn du Pläne von verschiedenen Unterkünften brauchst, musst du die Belegungs-Einträge auf verschiedenen Seiten speichern.
+			Du kannst viele unabhängige Pläne anlegen. Wenn du Pläne von verschiedenen Unterkünften brauchst, musst du im "Sked Kalender" eine andere "Kategorie" anlegen und verwenden.
 		</li>
 	</ul>
 
 <?php
+
 } // rex::isBackend()
 ?>
 </section>
